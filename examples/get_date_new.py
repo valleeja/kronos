@@ -1,3 +1,4 @@
+import sys
 import pandas as pd
 import requests
 import json
@@ -609,11 +610,8 @@ def main_all_history(stock_code="002354"):
         import requests
         import numpy as np
     except ImportError:
-        print("正在安装必要库...")
-        import subprocess
-        subprocess.check_call(["pip", "install", "requests", "numpy", "pandas"])
-        import requests
-        import numpy as np
+        print("缺少必要库 / Missing dependencies: pip install requests numpy pandas")
+        sys.exit(1)
 
     # 获取全历史数据（多数据源）
     stock_data = get_stock_data_with_retry_all_history(stock_code)

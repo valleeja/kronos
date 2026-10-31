@@ -1,3 +1,4 @@
+import sys
 import pandas as pd
 import requests
 import json
@@ -577,11 +578,8 @@ def main(stock_code="002354", start_year=2024, end_year=2025):
         import requests
         import numpy as np
     except ImportError:
-        print("正在安装必要库...")
-        import subprocess
-        subprocess.check_call(["pip", "install", "requests", "numpy", "pandas"])
-        import requests
-        import numpy as np
+        print("缺少必要库 / Missing dependencies: pip install requests numpy pandas")
+        sys.exit(1)
 
     # 获取数据（多数据源）
     stock_data = get_stock_data_with_retry(stock_code, start_year, end_year)

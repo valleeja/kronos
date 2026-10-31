@@ -22,7 +22,19 @@ except ImportError:
     print("Warning: Kronos model cannot be imported, will use simulated data for demonstration")
 
 app = Flask(__name__)
-CORS(app)
+
+# Security settings (safe defaults, override with environment variables)
+HOST = os.environ.get('KRONOS_HOST', '127.0.0.1')
+PORT = int(os.environ.get('KRONOS_PORT', '7070'))
+DEBUG = os.environ.get('KRONOS_DEBUG', '0') == '1'
+DATA_DIR = os.path.realpath(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'data'))
+MAX_LOOKBACK = 2048
+MAX_PRED_LEN = 512
+MAX_SAMPLE_COUNT = 10
+ALLOWED_DEVICES = ('cpu', 'cuda', 'cuda:0', 'mps')
+
+# Only allow the local web page to call the API
+CORS(app, origins=[f'http://localhost:{PORT}', f'http://127.0.0.1:{PORT}'])
 
 # Global variables to store models
 tokenizer = None
@@ -59,7 +71,7 @@ AVAILABLE_MODELS = {
 
 def load_data_files():
     """Scan data directory and return available data files"""
-    data_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'data')
+    data_dir = DATA_DIR
     data_files = []
     
     if os.path.exists(data_dir):
@@ -69,15 +81,25 @@ def load_data_files():
                 file_size = os.path.getsize(file_path)
                 data_files.append({
                     'name': file,
-                    'path': file_path,
+                    'path': file,
                     'size': f"{file_size / 1024:.1f} KB" if file_size < 1024*1024 else f"{file_size / (1024*1024):.1f} MB"
                 })
     
     return data_files
 
+def resolve_data_path(file_path):
+    """Return the real path if it is a file inside DATA_DIR, otherwise None"""
+    real_path = os.path.realpath(os.path.join(DATA_DIR, file_path))
+    if os.path.commonpath([real_path, DATA_DIR]) != DATA_DIR or not os.path.isfile(real_path):
+        return None
+    return real_path
+
 def load_data_file(file_path):
     """Load data file"""
     try:
+        file_path = resolve_data_path(file_path)
+        if file_path is None:
+            return None, "File must be inside the data directory"
         if file_path.endswith('.csv'):
             df = pd.read_csv(file_path)
         elif file_path.endswith('.feather'):
@@ -415,6 +437,11 @@ def predict():
         top_p = float(data.get('top_p', 0.9))
         sample_count = int(data.get('sample_count', 1))
         
+        if not (1 <= lookback <= MAX_LOOKBACK and 1 <= pred_len <= MAX_PRED_LEN and 1 <= sample_count <= MAX_SAMPLE_COUNT):
+            return jsonify({'error': f'Parameters out of range (lookback <= {MAX_LOOKBACK}, pred_len <= {MAX_PRED_LEN}, sample_count <= {MAX_SAMPLE_COUNT})'}), 400
+        if not (0 < temperature <= 5 and 0 < top_p <= 1):
+            return jsonify({'error': 'Parameters out of range (0 < temperature <= 5, 0 < top_p <= 1)'}), 400
+        
         if not file_path:
             return jsonify({'error': 'File path cannot be empty'}), 400
         
@@ -638,6 +665,8 @@ def load_model():
         
         if model_key not in AVAILABLE_MODELS:
             return jsonify({'error': f'Unsupported model: {model_key}'}), 400
+        if device not in ALLOWED_DEVICES:
+            return jsonify({'error': f'Unsupported device: {device}'}), 400
         
         model_config = AVAILABLE_MODELS[model_key]
         
@@ -705,4 +734,4 @@ if __name__ == '__main__':
     else:
         print("Tip: Will use simulated data for demonstration")
     
-    app.run(debug=True, host='0.0.0.0', port=7070)
+    app.run(debug=DEBUG, host=HOST, port=PORT)
