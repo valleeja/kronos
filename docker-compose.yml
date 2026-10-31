@@ -1,0 +1,32 @@
+services:
+  kronos:
+    build: .
+    image: kronos-webui
+    # Only reachable from this computer, never from the local network
+    ports:
+      - "127.0.0.1:7070:7070"
+    volumes:
+      # Your CSV files, read-only
+      - ./data:/app/data:ro
+      # Prediction results written by the web UI
+      - kronos-results:/app/webui/prediction_results
+      # Downloaded model weights, kept between runs
+      - hf-cache:/home/kronos/.cache/huggingface
+    environment:
+      # Set to 1 after the first run to forbid any call to Hugging Face
+      HF_HUB_OFFLINE: "${KRONOS_OFFLINE:-0}"
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 256
+    mem_limit: 4g
+    cpus: 2
+    restart: "no"
+
+volumes:
+  hf-cache:
+  kronos-results:
