@@ -86,6 +86,27 @@ After successful startup, visit http://localhost:7070
 - **CUDA**: NVIDIA GPU acceleration, best performance
 - **MPS**: Apple Silicon GPU acceleration, recommended for Mac users
 
+## 🐳 Run in Docker (recommended)
+
+Docker keeps Kronos and all its dependencies inside a locked-down container:
+
+- reachable only from this computer (`127.0.0.1:7070`), never from the local network;
+- runs as an unprivileged user, with a read-only filesystem, no Linux capabilities and `no-new-privileges`;
+- sees only your `data/` folder, read-only;
+- limited to 2 CPUs, 4 GB of memory and 256 processes.
+
+```bash
+mkdir -p data
+cp finetune_csv/data/HK_ali_09988_kline_5min_all.csv data/   # sample file
+docker compose up --build
+```
+
+Then open http://localhost:7070. The first model load downloads the weights from Hugging Face into the `hf-cache` volume. After that, you can forbid any outside call with `KRONOS_OFFLINE=1 docker compose up`.
+
+Prediction results are stored in the `kronos-results` volume. To copy them out: `docker compose cp kronos:/app/webui/prediction_results ./prediction_results`.
+
+The image installs the CPU build of PyTorch. For an NVIDIA GPU, build with `--build-arg TORCH_INDEX_URL=https://download.pytorch.org/whl/cu121` and add GPU access to the service.
+
 ## 🔒 Security
 
 The server is locked down by default:
