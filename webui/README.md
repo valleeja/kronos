@@ -86,6 +86,26 @@ After successful startup, visit http://localhost:7070
 - **CUDA**: NVIDIA GPU acceleration, best performance
 - **MPS**: Apple Silicon GPU acceleration, recommended for Mac users
 
+## 🔒 Security
+
+The server is locked down by default:
+
+- It listens on `127.0.0.1` only, so other machines on your network cannot reach it.
+- Flask debug mode (which allows remote code execution) is off.
+- CORS only accepts requests from the local page.
+- Data files can only be read from the project's `data/` folder.
+- Prediction parameters are bounded (`lookback` <= 2048, `pred_len` <= 512, `sample_count` <= 10).
+
+You can override the defaults with environment variables, at your own risk: `KRONOS_HOST`, `KRONOS_PORT`, `KRONOS_DEBUG=1`.
+
+Install everything in a virtual environment to keep it separate from your system Python:
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate   # Windows: .venv\Scripts\activate
+pip install -r requirements.txt -r webui/requirements.txt
+```
+
 ## ⚠️ Notes
 
 - `amount` column is not used for prediction, only for display
